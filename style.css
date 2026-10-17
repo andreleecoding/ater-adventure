@@ -116,15 +116,9 @@
   #rotateHint{ z-index:20; background:var(--moss); }
   /* 黑幕標題 */
   .titlescreen{ background:#000; z-index:12; }
-  .titletap{ appearance:none; border:0; background:transparent; color:var(--bone); font:inherit; cursor:pointer;
-    position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; touch-action:manipulation; }
-  .titletap .t1{ font-size:clamp(36px,7vw,64px); font-weight:900; letter-spacing:.16em; color:var(--ember); text-shadow:0 0 28px rgba(255,155,61,.45); opacity:0; animation:rise 2.4s ease-out .4s forwards; }
-  .titletap .t2{ font-size:clamp(17px,2.6vw,24px); letter-spacing:.5em; color:var(--lichen); opacity:0; animation:rise 2s ease-out 1.6s forwards; }
-  .titletap .t3{ margin-top:48px; font-size:17px; font-weight:700; letter-spacing:.2em; opacity:0; animation:appear .8s ease-out 3.2s forwards, breathe 2.2s ease-in-out 4s infinite; }
   @keyframes rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
   @keyframes appear{ to{ opacity:.85; } }
   @keyframes breathe{ 0%,100%{ opacity:.85; } 50%{ opacity:.3; } }
-  @media (prefers-reduced-motion: reduce){ .titletap span{ animation:none !important; opacity:1 !important; } }
   /* 序章動畫 */
   #prologueCanvas{ position:fixed; top:0; left:0; width:100%; height:100%; display:none; z-index:14; background:#000; }
   .skip{ position:fixed; z-index:16; top:max(14px,env(safe-area-inset-top,0px)); right:max(14px,env(safe-area-inset-right,0px));
@@ -181,3 +175,208 @@
 #pwaUpdateNotice .pwa-actions{display:flex;gap:10px;justify-content:flex-end}
 #pwaUpdateNotice button{font:inherit;font-size:15px;font-weight:700;padding:10px 16px;border-radius:22px;border:1px solid #a8bfa0;cursor:pointer;background:transparent;color:#f1ead2;touch-action:manipulation}
 #pwaUpdateNotice #pwaUpdateNow{background:#ff9b3d;color:#2b1404;border-color:#ff9b3d}
+
+
+/* v1.0.1: iPhone 橫向背包長名稱和詳細資訊可完整閱讀 */
+#bagScreen .item{
+  min-width:0;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  overscroll-behavior:contain;
+  justify-content:flex-start;
+  align-content:start;
+}
+#bagScreen .item strong{
+  display:block;
+  min-width:0;
+  max-width:100%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  line-height:1.28;
+  flex-shrink:0;
+}
+#bagScreen .item .big,
+#bagScreen .item span,
+#bagScreen .item em{flex-shrink:0;}
+#bagScreen .item.r-rare strong,
+#bagScreen .item.r-legend strong{margin-top:18px;}
+@media (max-height:500px) and (orientation:landscape){
+  #bagScreen .bag{gap:7px;}
+  #bagScreen .bag-head h1{font-size:clamp(20px,4.1vh,28px);}
+  #bagScreen .bagstats{font-size:clamp(11px,2.5vh,14px);line-height:1.3;}
+  #bagScreen .tab{font-size:clamp(13px,3.3vh,17px);padding:7px 10px;border-radius:13px;}
+  #bagScreen .items{gap:8px;}
+  #bagScreen .item{padding:10px 12px;gap:5px;border-radius:14px;}
+  #bagScreen .item strong{font-size:clamp(15px,3.8vh,19px);}
+  #bagScreen .item .big{font-size:clamp(20px,5vh,26px);}
+  #bagScreen .item span{font-size:clamp(12px,2.9vh,14px);line-height:1.35;}
+  #bagScreen .item .tag{top:7px;left:12px;}
+  #bagScreen .item.r-rare strong,
+  #bagScreen .item.r-legend strong{margin-top:17px;}
+  #bagScreen .pager .btn{min-width:0;padding:7px 15px;font-size:clamp(13px,3.3vh,17px);}
+  #bagScreen #pageInfo{font-size:14px;}
+}
+
+/* v1.0.6：恢復經典版大標題、橘色光暈與開場留白；只使用明確的開始按鈕。 */
+#startScreen.titlescreen:not(.hidden){
+  background:#000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:calc(env(safe-area-inset-top, 0px) + 10px) calc(env(safe-area-inset-right, 0px) + 14px) calc(env(safe-area-inset-bottom, 0px) + 10px) calc(env(safe-area-inset-left, 0px) + 14px);
+}
+#startScreen .title-stage{
+  width:100%;
+  min-height:0;
+  max-height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  gap:0;
+}
+#startScreen .title-art{
+  display:flex;
+  position:static;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(8px, 1.8vh, 16px);
+  width:100%;
+  transform:none;
+  pointer-events:none;
+}
+#startScreen .title-art .t1{
+  display:block;
+  font-size:clamp(32px, min(7vw, 17vh), 70px);
+  font-weight:900;
+  line-height:1.2;
+  letter-spacing:.14em;
+  padding-left:.14em;
+  white-space:nowrap;
+  color:var(--ember);
+  text-shadow:0 0 28px rgba(255,155,61,.45);
+  opacity:0;
+  animation:none;
+}
+#startScreen .title-art .t2{
+  display:block;
+  font-size:clamp(16px, min(2.6vw, 6vh), 24px);
+  font-weight:400;
+  line-height:1.3;
+  letter-spacing:.5em;
+  padding-left:.5em;
+  white-space:nowrap;
+  color:var(--lichen);
+  opacity:0;
+  animation:none;
+}
+#startScreen .title-actions{
+  position:static;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:clamp(7px, 1.4vh, 12px);
+  transform:none;
+  width:min(360px, 85vw);
+  max-width:100%;
+  margin-top:clamp(28px, 8vh, 62px);
+  z-index:3;
+}
+#startScreen .title-actions .btn{
+  min-width:0;
+  width:100%;
+  max-width:100%;
+  min-height:44px;
+  font-size:clamp(15px, min(3.3vh, 2.1vw), 19px);
+  padding:10px 20px;
+  line-height:1.25;
+  white-space:normal;
+  touch-action:manipulation;
+}
+#startScreen .title-actions .title-action-primary{
+  width:min(286px, 100%);
+  color:var(--ember-ink);
+  background:var(--ember);
+  border:0;
+  box-shadow:0 6px 0 #b55f17;
+}
+#startScreen .title-actions .title-action-secondary{
+  width:auto;
+  min-width:180px;
+  min-height:40px;
+  font-size:clamp(13px, 2.6vh, 16px);
+  padding:7px 22px;
+  color:var(--lichen);
+  border:1px solid rgba(168,191,160,.52);
+  background:transparent;
+  box-shadow:none;
+  letter-spacing:.09em;
+}
+#startScreen .title-actions .title-action-secondary:active{
+  background:rgba(168,191,160,.14);
+  transform:translateY(1px);
+}
+#startScreen .title-save-hint{
+  margin:0;
+  color:rgba(168,191,160,.7);
+  font-size:clamp(10px, 2.3vh, 13px);
+  letter-spacing:.04em;
+  line-height:1.3;
+}
+#startScreen .title-save-hint[hidden],
+#startScreen .title-actions [hidden]{display:none!important;}
+/* iPhone Safari 橫向可用高度較小，保留視覺層次但收緊留白。 */
+@media (max-height:410px) and (orientation:landscape){
+  #startScreen .title-actions{margin-top:clamp(20px, 6vh, 34px);gap:7px;}
+  #startScreen .title-actions .btn{padding:7px 18px;min-height:42px;}
+  #startScreen .title-actions .title-action-secondary{min-height:34px;padding:5px 18px;}
+}
+/* 矮螢幕也避免文字被裁切；需要時縮小各區間距。 */
+@media (max-height:280px) and (orientation:landscape){
+  #startScreen .title-art .t1{font-size:clamp(26px, 14vh, 36px);}
+  #startScreen .title-art .t2{font-size:14px;}
+  #startScreen .title-actions{margin-top:12px;gap:4px;}
+  #startScreen .title-actions .btn{min-height:32px;padding:4px 14px;}
+  #startScreen .title-actions .title-action-secondary{min-height:29px;}
+}
+.new-run-confirm{z-index:40;background:rgba(0,0,0,.87);display:flex;align-items:center;justify-content:center;padding:20px;}
+.new-run-card{width:min(530px,95vw);max-height:85dvh;overflow-y:auto;text-align:center;}
+.new-run-confirm-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.new-run-confirm-actions .btn{min-width:0;flex:1 1 180px;touch-action:manipulation;}
+@media (max-height:480px) and (orientation:landscape){
+  .new-run-card{padding:14px 20px;}
+  .new-run-card h1{margin:0 0 8px;font-size:22px;}
+  .new-run-card p{margin:0 0 12px;font-size:14px;}
+  .new-run-confirm-actions .btn{font-size:14px;padding:8px 12px;}
+}
+
+
+/* 隱藏狀態必須優先於標題版面；避免開始後仍覆蓋遊戲。 */
+#startScreen.hidden{display:none;}
+
+/* v1.0.7：遊戲初始化及橫向提示結束後才開始計算標題動畫。 */
+#startScreen.title-intro-playing .title-art .t1{animation:rise 2.4s ease-out .4s both;}
+#startScreen.title-intro-playing .title-art .t2{animation:rise 2s ease-out 1.6s both;}
+#startScreen .title-actions{opacity:0;visibility:hidden;pointer-events:none;}
+#startScreen.title-menu-ready .title-actions{
+  visibility:visible;pointer-events:auto;animation:titleMenuFade .5s ease-out both;
+}
+@keyframes titleMenuFade{from{opacity:0;}to{opacity:1;}}
+@keyframes titleFade{from{opacity:0;}to{opacity:1;}}
+/* 減少動態效果時只保留淡入，不移動文字；仍維持相同出場順序。 */
+@media (prefers-reduced-motion:reduce){
+  #startScreen.title-intro-playing .title-art .t1,
+  #startScreen.title-intro-playing .title-art .t2{animation-name:titleFade;}
+}
+#startScreen .title-version{
+  position:absolute;left:calc(env(safe-area-inset-left,0px) + 12px);
+  bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+  font-size:12px;line-height:1.3;letter-spacing:.04em;
+  color:var(--lichen);opacity:.65;pointer-events:none;
+}

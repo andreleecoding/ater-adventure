@@ -3052,6 +3052,69 @@ function closeBag() {
   game.paused = false; resetInputs();
 }
 
+/* ===== v1.0.2：單人關卡存檔（完成關卡後才保存；離線可用） ===== */
+const SAVE_KEY = 'ater-adventure-checkpoint-v1';
+const SAVE_VERSION = 1;
+function readCheckpoint() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || data.version !== SAVE_VERSION || !Number.isInteger(data.nextLevel) ||
+        data.nextLevel < 2 || data.nextLevel > 20 || !data.inv ||
+        !Array.isArray(data.inv.melee) || !Array.isArray(data.inv.bows) ||
+        typeof data.maxHp !== 'number' || !Number.isFinite(data.maxHp)) return null;
+    return data;
+  } catch (err) { console.warn('存檔讀取失敗', err); return null; }
+}
+function clearCheckpoint() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (err) { console.warn('無法清除存檔', err); }
+  refreshContinueButton();
+}
+function refreshContinueButton() {
+  const btn = $('continueBtn');
+  if (!btn) return;
+  const save = readCheckpoint();
+  btn.hidden = !save;
+  const hint = $('titleSaveHint');
+  if (hint) hint.hidden = !save;
+  const start = $('startBtn');
+  if (start) {
+    start.textContent = save ? '重新開始遊戲' : '開始新冒險';
+    start.classList.toggle('title-action-primary', !save);
+    start.classList.toggle('title-action-secondary', !!save);
+  }
+  if (save) btn.textContent = `繼續冒險 · 第 ${save.nextLevel} 關`;
+}
+function writeCheckpoint(completedLevel) {
+  if (NET.on) return;                       // 多人遊戲由房主同步，不使用單人存檔
+  if (completedLevel >= FINAL_LEVEL) { clearCheckpoint(); return; }
+  const bonus = Math.min(PC.maxHpCap, player.maxHp + 2);
+  const inventory = JSON.parse(JSON.stringify(inv));
+  if (completedLevel === 1) inventory.ultimate = true; // 第一關過場獲得無影斬
+  const data = {
+    version: SAVE_VERSION, nextLevel: completedLevel + 1, inv: inventory,
+    maxHp: bonus, runKills: game.runKills || 0,
+    runBosses: game.runBosses || 0, runTime: game.runTime || 0,
+    savedAt: Date.now()
+  };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); }
+  catch (err) { console.warn('關卡已完成，但存檔寫入失敗', err); }
+  refreshContinueButton();
+}
+function continueCheckpoint() {
+  const save = readCheckpoint();
+  if (!save || NET.on) return false;
+  inv = JSON.parse(JSON.stringify(save.inv));
+  player = makePlayer();
+  player.maxHp = Math.max(PC.startHp, Math.min(PC.maxHpCap, save.maxHp));
+  game.ultCD = 0; game.ult = null; game.vacCD = 0; game.vac = null;
+  game.seenHint = {};
+  game.runKills = save.runKills; game.runBosses = save.runBosses; game.runTime = save.runTime;
+  startLevel(save.nextLevel);
+  return true;
+}
+
 /* =========================================================
  * 15. 關卡流程
  * ========================================================= */
@@ -3111,6 +3174,7 @@ function retryLevel() {
 function levelClear() {
   game.mode = 'levelclear'; game.endT = 2.2; game.flurry = null; lvl.cleared = true;
   if (netHostOn()) netWorld({ k: 'cl', n: lvl.n });
+  writeCheckpoint(lvl.n);
   resetInputs();
   Sfx.play('levelClear', { player: true });
   game.banner = { title: `第 ${lvl.n} 關完成！`, sub: lvl.bossReward ? '大魔王的寶物已經收進背包' : '這片土地安靜下來了', t: 2.4 };
@@ -3207,11 +3271,36 @@ function tryFullscreenLandscape() {
     if (screen.orientation && screen.orientation.lock) { const r = screen.orientation.lock('landscape'); if (r && r.catch) r.catch(() => {}); }
   } catch (err) { /* 不支援就略過 */ }
 }
-$('startBtn').addEventListener('click', () => {
+$('continueBtn').addEventListener('click', () => {
   if (startScreen.classList.contains('hidden')) return;
   Sfx.unlock(); loadSavedMusic(); tryFullscreenLandscape();
+  if (!continueCheckpoint()) return;
+  startPlay();
+});
+function beginFreshAdventure() {
+  Sfx.unlock(); loadSavedMusic(); tryFullscreenLandscape();
+  clearCheckpoint(); // 只有玩家按下明確按鈕並通過確認後才清除
+  $('newRunConfirm').classList.add('hidden');
   startScreen.classList.add('hidden');
-  playPrologue(() => startPlay({ intro: true }));          // 序章播完（或跳過）就開始遊戲
+  newRun();
+  playPrologue(() => startPlay({ intro: true }));
+}
+$('startBtn').addEventListener('click', () => {
+  if (startScreen.classList.contains('hidden')) return;
+  if (readCheckpoint()) {
+    $('newRunConfirm').classList.remove('hidden');
+    $('cancelNewRunBtn').focus();
+    return;
+  }
+  beginFreshAdventure();
+});
+$('cancelNewRunBtn').addEventListener('click', () => {
+  $('newRunConfirm').classList.add('hidden');
+  $('startBtn').focus();
+});
+$('confirmNewRunBtn').addEventListener('click', () => {
+  if (startScreen.classList.contains('hidden')) return;
+  beginFreshAdventure();
 });
 $('helpBtn').addEventListener('click', () => { pauseScreen.classList.add('hidden'); $('helpScreen').classList.remove('hidden'); });
 $('helpBackBtn').addEventListener('click', () => { $('helpScreen').classList.add('hidden'); pauseScreen.classList.remove('hidden'); });
@@ -3307,7 +3396,7 @@ $('retryBtn').addEventListener('click', () => {
   if (netGuest()) { netAct({ a: 'retry', n: lvl.n }); $('retryBtn').textContent = '等待房主…'; return; }
   retryLevel(); startPlay();
 });
-$('restartAllBtn').addEventListener('click', () => { tryFullscreenLandscape(); newRun(); startPlay(); });
+$('restartAllBtn').addEventListener('click', () => { tryFullscreenLandscape(); clearCheckpoint(); newRun(); startPlay(); });
 // iOS Safari/PWA：在觸控結束時直接處理，避免 touchmove 後 click 未產生。
 // preventDefault 避免同一次觸控再合成第二個 click；滑鼠/鍵盤仍走 click。
 const closeBagButton = $('closeBagBtn');
@@ -7420,6 +7509,7 @@ function restartFromVictory() {
   if (victory) victory.stop();
   game.cutscene = false; game.fadeAt = 0;
   Sfx.duck(false);
+  clearCheckpoint();
   newRun();
   startPlay();
 }
@@ -7515,6 +7605,7 @@ function frame(now) {
 
 resize();
 newRun();
+refreshContinueButton();
 requestAnimationFrame(frame);
 
 // 測試用掛鉤（不影響遊戲）

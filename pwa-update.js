@@ -1,4 +1,4 @@
-/* 亞特的冒險 v1.0.0 — PWA 更新管理（與遊戲程式獨立） */
+/* 亞特的冒險 v1.0.2 — PWA 更新管理（與遊戲程式獨立） */
 (() => {
   'use strict';
   if (!('serviceWorker' in navigator) || !window.isSecureContext) return;

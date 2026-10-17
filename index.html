@@ -10,26 +10,44 @@
 <meta name="theme-color" content="#14231a">
 <meta name="apple-mobile-web-app-title" content="亞特的冒險">   <!-- 加入主畫面時圖示下方的名字 -->
 <title>亞特的冒險：燼野之境</title>
-<meta name="application-version" content="1.0.0">
+<meta name="application-version" content="1.0.7">
 <!-- PWA 圖示與安裝設定 -->
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./style.css?v=1.0.7">
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="safeProbe"></div>
 
-<!-- 開場：全黑畫面，標題慢慢浮現；點一下開始（iPad 需要點擊才能發聲）-->
-<div id="startScreen" class="overlay titlescreen">
-  <button id="startBtn" class="titletap" aria-label="點一下畫面開始">
-    <span class="t1">亞特的冒險</span>
-    <span class="t2">燼野之境</span>
-    <span class="t3">點一下畫面開始</span>
-  </button>
+<!-- 開場：標題慢慢浮現；只能透過明確按鈕開始或繼續-->
+<div id="startScreen" class="overlay titlescreen title-intro-pending">
+  <div class="title-stage">
+    <div class="title-art" aria-label="亞特的冒險：燼野之境">
+      <span class="t1">亞特的冒險</span>
+      <span class="t2">燼野之境</span>
+    </div>
+    <div class="title-actions">
+      <button type="button" id="continueBtn" class="btn title-action-primary" hidden>繼續冒險</button>
+      <button type="button" id="startBtn" class="btn title-action-primary">開始新冒險</button>
+      <p id="titleSaveHint" class="title-save-hint" hidden>重新開始將取代目前的關卡存檔</p>
+    </div>
+  </div>
+  <span class="title-version" aria-label="版本 1.0.7">v1.0.7</span>
+</div>
+<!-- 必須明確確認才能覆蓋既有存檔；點標題或背景不會重開。 -->
+<div id="newRunConfirm" class="overlay hidden new-run-confirm" role="dialog" aria-modal="true" aria-labelledby="newRunConfirmTitle">
+  <div class="card new-run-card">
+    <h1 id="newRunConfirmTitle">確定要重新開始？</h1>
+    <p id="newRunConfirmText">重新開始後，原本的關卡進度與本局裝備將被取代，無法復原。</p>
+    <div class="row new-run-confirm-actions">
+      <button type="button" class="btn quiet" id="cancelNewRunBtn">取消，保留存檔</button>
+      <button type="button" class="btn" id="confirmNewRunBtn">確定重新開始</button>
+    </div>
+  </div>
 </div>
 
 <!-- 操作說明（從暫停選單打開）-->
@@ -149,7 +167,8 @@
   </div>
 </div>
 
-<script src="./game.js" defer></script>
+<script src="./game.js?v=1.0.7" defer></script>
+<script src="./title-intro.js?v=1.0.7" defer></script>
 
 <!-- PWA 更新提示：不打斷遊戲，由玩家決定重啟時機 -->
 <div id="pwaUpdateNotice" hidden role="status" aria-live="polite" aria-label="遊戲更新">
@@ -157,6 +176,6 @@
   <p>新版遊戲已下載完成。立即更新會重新啟動遊戲，請先完成目前的冒險。</p>
   <div class="pwa-actions"><button type="button" id="pwaUpdateLater">稍後再說</button><button type="button" id="pwaUpdateNow">立即更新</button></div>
 </div>
-<script src="./pwa-update.js" defer></script>
+<script src="./pwa-update.js?v=1.0.7" defer></script>
 </body>
 </html>

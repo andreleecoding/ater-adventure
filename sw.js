@@ -1,11 +1,12 @@
-/* 亞特的冒險 — v1.0.0；每次發布請同步更新 VERSION。 */
-const VERSION = '1.0.0';
+/* 亞特的冒險 — v1.0.7；每次發布請同步更新 VERSION。 */
+const VERSION = '1.0.7';
 const CACHE_NAME = 'ater-adventure-' + VERSION;
 const FILES = [
   "./index.html",
-  "./style.css",
-  "./game.js",
-  "./pwa-update.js",
+  "./style.css?v=1.0.7",
+  "./game.js?v=1.0.7",
+  "./title-intro.js?v=1.0.7",
+  "./pwa-update.js?v=1.0.7",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png",
