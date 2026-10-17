@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<!-- 鎖定縮放：禁止雙指縮放、雙擊放大；viewport-fit=cover 讓畫面延伸到 iPad 圓角區 -->
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14231a">
+<meta name="apple-mobile-web-app-title" content="亞特的冒險">   <!-- 加入主畫面時圖示下方的名字 -->
+<title>亞特的冒險：燼野之境</title>
+<meta name="application-version" content="1.0.0">
+<!-- PWA 圖示與安裝設定 -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="safeProbe"></div>
+
+<!-- 開場：全黑畫面，標題慢慢浮現；點一下開始（iPad 需要點擊才能發聲）-->
+<div id="startScreen" class="overlay titlescreen">
+  <button id="startBtn" class="titletap" aria-label="點一下畫面開始">
+    <span class="t1">亞特的冒險</span>
+    <span class="t2">燼野之境</span>
+    <span class="t3">點一下畫面開始</span>
+  </button>
+</div>
+
+<!-- 操作說明（從暫停選單打開）-->
+<div id="helpScreen" class="overlay hidden">
+  <div class="card">
+    <h1>操作說明</h1>
+    <div class="howto">
+      <div><b>左手搖桿</b>　360° 移動</div>
+      <div><b>攻擊</b>　揮劍、砍草、打破木箱</div>
+      <div><b>閃避</b>　消耗體力衝刺，衝刺中不會受傷</div>
+      <div><b>舉盾</b>　敵人出手瞬間舉盾＝完美格擋，連箭都能反彈</div>
+      <div><b>射箭</b>　畫面內有敵人會自動瞄準最近的一隻；按住拖曳小圓點可手動瞄準（要先拿到弓）</div>
+      <div><b>背包</b>　搖桿上方，切換近戰武器與弓</div>
+      <div class="wide"><span class="hot">迅影時刻</span>　敵人揮擊的前一刻閃避，整個世界會變慢，只有你不受影響。這時按攻擊會直接衝到敵人面前連砍三刀。</div>
+      <div class="wide">攻擊<span class="hot">火爆石</span>會噴出火花點燃草叢；擊敗拿弓的射手就能拿到他的弓。</div>
+      <div class="wide"><span class="hot">無影斬</span>　畫面內有敵人時按下，自動斬殺最近的 4 個敵人，冷卻 3 分鐘。</div>
+      <div class="wide"><span class="hot">大魔王</span>　每 5 關出現。紅圈震地要跑出圈外；直線突進用盾完美格擋能讓牠暈眩；紫色光彈可以用盾反彈。血量剩一半後弓箭無效。</div>
+      <div class="wide"><span class="hot">吸怪器</span>　第 6 關取得。畫面內有怪物時按下，把怪物全部吸進去再把掉落物吐給你，冷卻 3 分鐘。</div>
+    </div>
+    <button class="btn" id="helpBackBtn">回到暫停選單</button>
+  </div>
+</div>
+
+<!-- 通關勝利畫面：煙火秀 -->
+<canvas id="victoryCanvas"></canvas>
+<button class="skip hidden" id="victorySkip">跳過 ▶▶</button>
+<div id="victoryUI" class="hidden">
+  <div class="vcard">
+    <div class="vhead">燼野之境　完全制霸</div>
+    <div class="vstats" id="victoryStats"></div>
+    <div class="row"><button class="btn" id="victoryAgain">再玩一次</button><button class="btn quiet" id="victoryTitle">回到標題畫面</button></div>
+    <p class="vhint">點畫面任何地方，可以自己放煙火！</p>
+  </div>
+</div>
+
+<!-- 連線：兩台 iPad 一起玩（從暫停選單打開）-->
+<div id="netScreen" class="overlay hidden">
+  <div class="card">
+    <h1>連線</h1>
+    <p id="netStatus" class="netstatus"></p>
+    <div id="netCodeBox" class="netcode nh"></div>
+    <div class="row" id="netMainRow"><button class="btn" id="netHostBtn">建立房間</button><button class="btn" id="netJoinBtn">加入房間</button></div>
+    <div class="row nh" id="netJoinRow"><input id="netCodeInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="房號" aria-label="輸入 4 位數房號"><button class="btn" id="netJoinGo">加入</button></div>
+    <div id="netDiag" class="netdiag nh"></div>
+    <p id="netVer" class="netver"></p>
+    <div class="row"><button class="btn quiet" id="netDiagBtn">連線診斷</button><button class="btn quiet nh" id="netLeaveBtn">取消</button><button class="btn quiet" id="netBackBtn">回到暫停選單</button></div>
+  </div>
+</div>
+<div id="netNoticeScreen" class="overlay hidden">
+  <div class="card">
+    <h1 id="netNoticeTitle">連線中斷</h1>
+    <p id="netNoticeText"></p>
+    <div class="row"><button class="btn" id="netNoticeBtn">回到標題畫面</button></div>
+  </div>
+</div>
+
+<!-- 序章動畫的畫布與跳過鍵 -->
+<canvas id="prologueCanvas"></canvas>
+<button class="skip hidden" id="prologueSkip">跳過 ▶▶</button>
+
+<div id="pauseScreen" class="overlay hidden">
+  <div class="card">
+    <h1>暫停</h1>
+    <p style="color:var(--lichen)">休息一下，燼野還在等你。</p>
+    <div class="row"><button class="btn" id="resumeBtn">繼續</button><button class="btn quiet" id="restartBtn">重新挑戰本關</button><button class="btn quiet" id="helpBtn">操作說明</button><button class="btn quiet" id="netBtn">連線</button></div>
+    <div class="vol">
+      <label for="sfxVol">音效音量</label><input type="range" id="sfxVol" min="0" max="100" step="5" value="80"><output id="sfxVolOut">80%</output>
+      <label for="musicVol">音樂音量</label><input type="range" id="musicVol" min="0" max="100" step="5" value="80"><output id="musicVolOut">80%</output>
+    </div>
+    <div class="row">
+      <!-- 透明的檔案選擇器直接蓋在按鈕上：手指點到的就是真正的選擇器，iPad 不會擋 -->
+      <label class="filebtn"><span class="btn quiet">自訂背景音樂</span><input type="file" id="musicFile" accept="audio/*,.mp3,.m4a,.aac,.wav" aria-label="自訂背景音樂"></label>
+      <button class="btn quiet" id="defaultMusicBtn">改回原創配樂</button>
+    </div>
+    <p id="musicNote" style="color:var(--lichen);font-size:14px;margin-top:10px"></p>
+  </div>
+</div>
+
+<div id="bagScreen" class="overlay hidden">
+  <div class="bag">
+    <div class="bag-head">
+      <div><h1>背包</h1><div class="bagstats" id="bagStats"></div></div>
+      <button class="btn" id="closeBagBtn">回到遊戲</button>
+    </div>
+    <div class="tabs"><button class="tab on" id="tabMelee">近戰武器</button><button class="tab" id="tabBow">弓</button></div>
+    <div class="items" id="bagGrid"></div>
+    <div class="pager">
+      <button class="btn quiet" id="prevPage">◀ 上一頁</button>
+      <span id="pageInfo">第 1 / 1 頁</span>
+      <button class="btn quiet" id="nextPage">下一頁 ▶</button>
+    </div>
+  </div>
+</div>
+
+<div id="levelScreen" class="overlay hidden">
+  <div class="card">
+    <h1 id="levelTitle">關卡完成</h1>
+    <p id="levelText"></p>
+    <div class="row"><button class="btn" id="levelBtn">前往下一關</button></div>
+  </div>
+</div>
+
+<div id="endScreen" class="overlay hidden">
+  <div class="card">
+    <h1 id="endTitle">亞特倒下了</h1>
+    <p id="endText"></p>
+    <div class="row"><button class="btn" id="retryBtn">重新挑戰本關</button><button class="btn quiet" id="restartAllBtn">從第一關開始</button></div>
+  </div>
+</div>
+
+<div id="rotateHint" class="overlay hidden">
+  <div style="text-align:center">
+    <div class="tablet"></div>
+    <p style="font-size:20px;font-weight:700;margin:0">請將 iPad 轉為橫向</p>
+    <p style="color:var(--lichen);margin:6px 0 18px">轉回橫向就會自動繼續</p>
+    <button class="btn quiet" id="ignoreRotateBtn">已經是橫向，直接開始</button>
+  </div>
+</div>
+
+<script src="./game.js" defer></script>
+
+<!-- PWA 更新提示：不打斷遊戲，由玩家決定重啟時機 -->
+<div id="pwaUpdateNotice" hidden role="status" aria-live="polite" aria-label="遊戲更新">
+  <strong>發現新版本！</strong>
+  <p>新版遊戲已下載完成。立即更新會重新啟動遊戲，請先完成目前的冒險。</p>
+  <div class="pwa-actions"><button type="button" id="pwaUpdateLater">稍後再說</button><button type="button" id="pwaUpdateNow">立即更新</button></div>
+</div>
+<script src="./pwa-update.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "name": "亞特的冒險：燼野之境",
+  "short_name": "亞特的冒險",
+  "description": "8-bit 像素風格動作冒險遊戲",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#14231a",
+  "theme_color": "#14231a",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
