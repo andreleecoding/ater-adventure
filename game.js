@@ -170,6 +170,7 @@ const eliteOf = n => Math.min(ELITE_PREFIX.length - 1, Math.floor((n - 1) / THEM
 const levelName = n => ELITE_PREFIX[eliteOf(n)] + themeOf(n).name;
 const isBossLevel = n => n % 5 === 0;          // 每 5 關有大魔王
 const killTargetOf = n => {                        // 第 1 關 12 隻，之後每關 +4；魔王關先打一半；第 7 關（狂暴赤砂荒地）起再打七折
+  if (!NET.on && n >= 16 && n <= 20) return ({16:24,17:3,18:60,19:3,20:12})[n];
   const base = isBossLevel(n) ? Math.round((8 + 4 * n) / 2) : 8 + 4 * n;
   return n >= 7 ? Math.round(base * 0.7) : base;
 };
@@ -502,7 +503,7 @@ window.addEventListener('mouseup', () => { if (mouseDown) { mouseDown = false; p
 // 頁面層級：禁止捲動與縮放（卡片內允許上下捲）
 document.addEventListener('touchmove', e => {
   // 背包和卡片內的觸控由各自的 UI 處理，避免 Safari 的點擊被取消
-  if (e.target && e.target.closest && e.target.closest('.card, .bag')) return;
+  if (e.target && e.target.closest && e.target.closest('.card, .bag, .vcard')) return;
   e.preventDefault();
 }, { passive: false });
 ['gesturestart', 'gesturechange', 'gestureend', 'dblclick'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
@@ -1493,6 +1494,7 @@ function killEnemy(e) {
   if (game.mode === 'play') {
     lvl.kills++;
     game.runKills = (game.runKills || 0) + 1;          // 通關紀錄：總擊倒數
+    if (lateActive() && lateEnemyKilled(e)) return;
     if (lvl.kills >= lvl.target) {
       if (!isBossLevel(lvl.n)) levelClear();
       else if (!lvl.bossSpawned) spawnBoss();      // 魔王關：小怪打完，大魔王現身
@@ -1741,7 +1743,9 @@ function makeBossType(n) {
 const bossAlive = () => enemies.find(e => e.boss && !e.dead);
 function spawnBoss() {
   lvl.bossSpawned = true;
-  const T = makeBossType(lvl.n), p = player;
+  let T = makeBossType(lvl.n);
+  if (lateActive() && lvl.n === 19) T = Object.assign({}, T, {name:'熔岩督軍',hp:Math.round(T.hp * .3),damage:4,orbDmg:2,data:Object.assign({},T.data,{accent:'#ff8a3d'})});
+  const p = player;
   let x = p.x + 380, y = p.y;
   for (let k = 0; k < 24; k++) {
     const a = Math.random() * TAU, d = rand(340, 420);
@@ -1752,7 +1756,7 @@ function spawnBoss() {
   const e = makeEnemy(T, x, y);
   Object.assign(e, { boss: true, state: 'intro', stateT: 1.8, invulnT: 1.8, phase: 1, atkCD: 2.8, summonCD: 6, slamR: 125, windMax: 1 });
   enemies.push(e);
-  game.banner = { title: '大魔王出現！', sub: T.name, t: 3 };
+  game.banner = { title: lateActive() && lvl.n === 19 ? '熔岩督軍出現！' : '大魔王出現！', sub: T.name, t: 3 };
   game.shake = Math.max(game.shake, 8); game.flash = 0.4;
   Sfx.play('bossWarn', { player: true }); Sfx.play('bossRoar', { player: true });
   showHint('boss', '紅圈震地要跑出圈外或閃避；直線突進可用盾完美格擋讓牠暈眩；紫色光彈可以用盾反彈', 9);
@@ -1826,7 +1830,7 @@ function bossDefeated(e) {
   game.slowT = 1.2; game.flash = 0.8; game.shake = 14; game.flurry = null;
   Sfx.play('bossDie', { player: true });
   burst(e.x, e.y, 60, e.t.data.accent, 80, 360, 1.2, 5);
-  for (const x of enemies) if (!x.dead && !x.boss) { x.dead = true; burst(x.x, x.y, 10, 'rgba(236,236,236,1)', 30, 120, 0.6, 6, 'smoke'); }
+  for (const x of enemies) if (!x.dead && !x.boss && !(lateActive() && lvl.n === 19 && x.lateGuard)) { x.dead = true; burst(x.x, x.y, 10, 'rgba(236,236,236,1)', 30, 120, 0.6, 6, 'smoke'); }
   for (const a of arrows) if (a.owner === 'enemy') a.life = 0;   // 敵方光彈消散（不替換陣列，避免箭矢迴圈中出錯）
   lvl.bossReward = grantBossReward(e);
   if (netHostOn()) netWorld({ k: 'brw' });              // 隊友也拿到一樣的魔王獎勵
@@ -1897,7 +1901,10 @@ function updateBoss(e, dt) {
         e.dead = true;
         burst(e.x, e.y, 90, T.data.accent, 100, 420, 1.2, 5); ring(e.x, e.y, '#ffffff', 30);
         game.shake = 16; game.flash = 1;
-        if (game.mode === 'play') levelClear();
+        if (game.mode === 'play') {
+          if (lateActive() && lvl.n === 19) { lvl.late.bossDead = true; checkLateClear(); }
+          else levelClear();
+        }
       }
       return;
   }
@@ -2548,12 +2555,13 @@ function perfectParry(e) {
 // ---- 生怪：無限世界中在畫面外產生怪物 ----
 const SCR_SPAWN = [];
 function pickRole() {
+  if (lateActive() && lvl.n === 16) return [['melee','melee','brute'],['archer','melee','archer'],['brute','archer','melee']][lvl.late.wave - 1][lvl.spawned % 3];
   if (lvl.n === 1 && lvl.spawned === 1) return 'archer';      // 第一關第二隻一定是射手，早點拿到弓
   const r = Math.random(), pb = Math.min(0.12 + 0.03 * lvl.n, 0.3), pa = 0.25;
   return r < pb ? 'brute' : r < pb + pa ? 'archer' : 'melee';
 }
-function trySpawnEnemy(minD, maxD, elite, center) {
-  const T = lvl.types[pickRole()], ctr = center || player;
+function trySpawnEnemy(minD, maxD, elite, center, role) {
+  const T = lvl.types[role || pickRole()], ctr = center || player;
   for (let k = 0; k < 10; k++) {
     const a = Math.random() * TAU, d = rand(minD, maxD);
     const x = ctr.x + Math.cos(a) * d, y = ctr.y + Math.sin(a) * d;
@@ -2578,6 +2586,7 @@ function updateSpawner(dt) {
     if (!e.dead && !e.boss && !e.elite && (NET.on ? netNearestDist(e.x, e.y) : Math.hypot(e.x - player.x, e.y - player.y)) > DESPAWN_DIST) { e.dead = true; e.despawned = true; }
   }
   if (enemies.some(e => e.dead)) enemies = enemies.filter(e => !e.dead);   // 迅影目標仍保有引用，updateFlurry 會依 dead 結束
+  if (lateActive()) { updateLateSpawner(dt); return; }
   if (lvl.holdSpawn) return;                          // 第 6 關箱子打開前不生怪
   lvl.spawnT -= dt;
   const alive = enemies.length;
@@ -3130,7 +3139,8 @@ function startLevel(n) {
   lvl.n = n; lvl.kills = 0; lvl.target = killTargetOf(n); lvl.maxAlive = Math.min(4 + n, 10);
   if (NET.on) lvl.maxAlive = Math.round(lvl.maxAlive * 1.5);         // 兩人時怪物多一點
   lvl.spawnT = 2; lvl.spawned = 0; lvl.bossSpawned = false; lvl.bossReward = null;
-  const ne = eliteCount(n);                           // 精英怪在擊倒進度 1/(n+1)、2/(n+1)… 時出現
+  lvl.late = !NET.on && n >= 16 && n <= 20 ? {wave:1, rest:0, captains:0, guards:0, bossDead:false, elapsed:0, supplyAt:15} : null;
+  const ne = lvl.late ? 0 : eliteCount(n);                           // 精英怪在擊倒進度 1/(n+1)、2/(n+1)… 時出現
   lvl.elitesDue = Array.from({ length: ne }, (_, i) => Math.max(1, Math.round(lvl.target * (i + 1) / (ne + 1)))); lvl.elitesSpawned = 0;
   Sfx.musicReset();
   lvl.types = { melee: makeType('melee', n), brute: makeType('brute', n), archer: makeType('archer', n) };
@@ -3140,7 +3150,7 @@ function startLevel(n) {
   if (NET.on) netPlaceChests(n);                      // 連線：有幾個人（還沒有吸怪器）就放幾個箱子
   else if (n === 6 && !inv.vacuum) placeSkillChest();     // 狂暴的第一關：亞特右邊的神秘箱子，打開前沒有怪物
   const off = Math.hypot(VW, VH) / 2;              // 開場的怪物生成在畫面外，慢慢走過來
-  if (!lvl.holdSpawn) { trySpawnEnemy(off + 60, off + 300); trySpawnEnemy(off + 60, off + 300); }
+  if (!lvl.holdSpawn && !lateActive()) { trySpawnEnemy(off + 60, off + 300); trySpawnEnemy(off + 60, off + 300); }
   snapCamera();
   if (netHostOn()) netHostLevelEvent(false);          // 告訴隊友：一起進入這一關
 }
@@ -3148,7 +3158,7 @@ function levelBanner() {
   const hz = HAZARD_OF_THEME[(lvl.n - 1) % THEMES.length];
   if (hz) showHint('hz-' + hz, HAZARD_HINT[hz], 8);
   Sfx.play('levelStart', { player: true });
-  game.banner = { title: `第 ${lvl.n} 關　${levelName(lvl.n)}`, sub: isBossLevel(lvl.n) ? `擊倒 ${lvl.target} 隻怪物後，大魔王將會現身` : `擊倒 ${lvl.target} 隻怪物`, t: 3.5 };
+  game.banner = { title: `第 ${lvl.n} 關　${levelName(lvl.n)}`, sub: lateActive() ? lateGoal(lvl.n) : isBossLevel(lvl.n) ? `擊倒 ${lvl.target} 隻怪物後，大魔王將會現身` : `擊倒 ${lvl.target} 隻怪物`, t: 3.5 };
   if (lvl.n === 1) {
     showHint(null, '揮劍敲擊右邊的火爆石，火花會點燃草叢', 8);
     showHint(null, '敵人揮擊的前一刻閃避，就能觸發迅影時刻', 8);
@@ -3208,6 +3218,7 @@ function showLevelScreen() {
   levelText.textContent = (lvl.bossReward ? `擊敗大魔王的獎勵：${lvl.bossReward.join('、')}。` : '') +
     `${grow ? '最大生命 +1 顆心，' : ''}生命全部回滿。下一關是「${levelName(next)}」，怪物長得不一樣，也更強，需要擊倒 ${killTargetOf(next)} 隻` +
     (isBossLevel(next) ? '，之後大魔王會現身。' : '。');
+  if (!NET.on && next >= 16 && next <= 20) levelText.textContent = `${grow ? '最大生命 +1 顆心，' : ''}生命全部回滿。下一關：${levelName(next)}。${lateGoal(next)}。`;
   $('levelBtn').textContent = `前往第 ${next} 關`;
   levelScreen.classList.remove('hidden');
 }
@@ -3220,6 +3231,7 @@ function showEnd() {
   game.mode = 'over';
   endTitle.textContent = NET.on ? '兩個人都倒下了' : '亞特倒下了';
   endText.textContent = `第 ${lvl.n} 關，擊倒 ${lvl.kills} / ${lvl.target} 隻怪物。` + (NET.on ? '任何一個人按「重新挑戰本關」，兩個人就會一起重來。' : '試著在敵人出手前一刻閃避或舉盾。');
+  if (lateActive()) endText.textContent = `第 ${lvl.n} 關：${lateProgress()}。可以重新挑戰本關。`;
   $('retryBtn').textContent = '重新挑戰本關';
   $('restartAllBtn').style.display = NET.on ? 'none' : '';
   endScreen.classList.remove('hidden');
@@ -4233,11 +4245,35 @@ function drawOffscreenMarkers() {
   }
   ctx.globalAlpha = 1;
 }
+// 生命列只使用左側狀態區；超出寬度便切換為愛心與數字。
+function healthHUDLayout(width, safe, maxHp) {
+  const usable = Math.max(1, width - safe.l - safe.r);
+  const column = Math.min(240, usable * .28);
+  const hearts = maxHp / 2, gap = hearts > 7 ? 30 : 36, size = hearts > 7 ? 13 : 15;
+  return {column, hearts, gap, size, compact: (Math.ceil(hearts) - 1) * gap + size * 2 > column};
+}
+function fitHUDText(text, width) {
+  if (ctx.measureText(text).width <= width) return text;
+  let end = text.length;
+  while (end > 0 && ctx.measureText(text.slice(0, end) + '…').width > width) end--;
+  return text.slice(0,end) + '…';
+}
 function drawHUD() {
   const p = player;
   const x0 = SAFE.l + 26, y0 = SAFE.t + 30;
-  const hearts = p.maxHp / 2, gap = hearts > 7 ? 30 : 36, hs = hearts > 7 ? 13 : 15;
-  for (let i = 0; i < hearts; i++) {
+  const health = healthHUDLayout(VW, SAFE, p.maxHp);
+  const {hearts, gap, size:hs} = health;
+  if (health.compact) {
+    ctx.fillStyle = p.hp > 0 ? '#ff5f73' : 'rgba(0,0,0,.45)';
+    heartPath(x0,y0,15);ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1.5;heartPath(x0,y0,15);ctx.stroke();
+    ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.font='bold 19px "PingFang TC", sans-serif';ctx.lineWidth=4;ctx.strokeStyle='rgba(0,0,0,.8)';
+    const life = `${Math.max(0,p.hp) / 2} / ${hearts}`;
+    let lifeFont=19;
+    while(lifeFont>10 && ctx.measureText(life).width>health.column-30) {lifeFont--;ctx.font=`bold ${lifeFont}px "PingFang TC", sans-serif`;} 
+    ctx.strokeText(life,x0+25,y0-2);ctx.fillStyle=p.hp<=4?'#ff8a95':'#f1ead2';ctx.fillText(life,x0+25,y0-2);
+  } else for (let i = 0; i < hearts; i++) {
     const hx = x0 + i * gap, hy = y0, v = clamp(p.hp - i * 2, 0, 2);
     ctx.fillStyle = 'rgba(0,0,0,0.45)'; heartPath(hx, hy, hs); ctx.fill();
     if (v > 0) {
@@ -4248,7 +4284,7 @@ function drawHUD() {
     }
     ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5; heartPath(hx, hy, hs); ctx.stroke();
   }
-  const bx = x0 - 14, by = y0 + 24, bw = 180, bh = 12, ratio = p.stamina / PC.maxStamina;
+  const bx = x0 - 14, by = y0 + 24, bw = Math.min(180, health.column - 40), bh = 12, ratio = p.stamina / PC.maxStamina;
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(bx, by, bw, bh, 6); ctx.fill();
   const warn = p.staminaFlash > 0 && Math.floor(game.time * 12) % 2 === 0;
   ctx.fillStyle = warn ? '#ff5a5a' : (ratio < PC.dodgeCost / PC.maxStamina ? '#f4c542' : '#5be37d');
@@ -4260,23 +4296,28 @@ function drawHUD() {
   const W = curW(), B = curB();
   const eq = `劍：${W.name}（攻 ${W.atk}）　弓：${B ? `${B.name}（攻 ${B.atk}）` : '無'}`;
   ctx.font = 'bold 13px "PingFang TC", sans-serif'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-  ctx.strokeText(eq, bx, by + 30); ctx.fillStyle = '#f1ead2'; ctx.fillText(eq, bx, by + 30);
+  const equipment = fitHUDText(eq, Math.max(100,(VW-SAFE.l-SAFE.r)*.55));
+  ctx.strokeText(equipment, bx, by + 30); ctx.fillStyle = '#f1ead2'; ctx.fillText(equipment, bx, by + 30);
 
   // 關卡進度
-  const cx = VW / 2, ty = SAFE.t + 22;
+  const cx = SAFE.l + (VW-SAFE.l-SAFE.r)/2, ty = SAFE.t + 22;
+  const titleWidth = Math.max(80,Math.min(420, VW-SAFE.l-SAFE.r-2*(health.column+30)));
   ctx.textAlign = 'center';
   ctx.font = 'bold 16px "PingFang TC", sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.6)';
   const boss = bossAlive();
-  const title = boss ? `第 ${lvl.n} 關　${levelName(lvl.n)}　大魔王` : `第 ${lvl.n} 關　${levelName(lvl.n)}　擊倒 ${lvl.kills} / ${lvl.target}`;
-  ctx.strokeText(title, cx, ty); ctx.fillStyle = '#f1ead2'; ctx.fillText(title, cx, ty);
-  const pw = 220;
+  const title = lateActive() ? `第 ${lvl.n} 關　${lateProgress()}` : boss ? `第 ${lvl.n} 關　${levelName(lvl.n)}　大魔王` : `第 ${lvl.n} 關　${levelName(lvl.n)}　擊倒 ${lvl.kills} / ${lvl.target}`;
+  const shortTitle = lateActive() ? title : `第 ${lvl.n} 關　${boss ? '大魔王' : `擊倒 ${lvl.kills} / ${lvl.target}`}`;
+  const header = fitHUDText(titleWidth < 340 ? shortTitle : title,titleWidth);
+  ctx.strokeText(header, cx, ty); ctx.fillStyle = '#f1ead2'; ctx.fillText(header, cx, ty);
+  const pw = Math.min(220,titleWidth);
   ctx.fillStyle = 'rgba(0,0,0,0.5)'; rr(cx - pw / 2, ty + 14, pw, 7, 3.5); ctx.fill();
-  ctx.fillStyle = '#ff9b3d'; if (lvl.kills > 0) { rr(cx - pw / 2, ty + 14, Math.max(7, pw * Math.min(1, lvl.kills / lvl.target)), 7, 3.5); ctx.fill(); }
+  const progress = lateActive() ? lateFraction() : lvl.kills / lvl.target;
+  ctx.fillStyle = '#ff9b3d'; if (progress > 0) { rr(cx - pw / 2, ty + 14, Math.max(7, pw * Math.min(1, progress)), 7, 3.5); ctx.fill(); }
   if (boss) {                                       // 大魔王血條
-    const bw = Math.min(VW * 0.5, 520), bx2 = cx - bw / 2, by2 = ty + 42;
+    const bw = Math.min(titleWidth, 520), bx2 = cx - bw / 2, by2 = ty + 42;
     const intro = boss.state === 'intro' ? 1 - clamp(boss.stateT / 1.8, 0, 1) : 1;
     ctx.font = 'bold 15px "PingFang TC", sans-serif'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-    const nm = boss.t.name + (boss.phase === 2 ? '（憤怒）' : '');
+    const nm = fitHUDText(boss.t.name + (boss.phase === 2 ? '（憤怒）' : ''),titleWidth);
     ctx.strokeText(nm, cx, by2 - 9); ctx.fillStyle = boss.t.data.accent; ctx.fillText(nm, cx, by2 - 9);
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; rr(bx2, by2, bw, 12, 6); ctx.fill();
     ctx.fillStyle = boss.invulnT > 0 && Math.floor(game.time * 12) % 2 ? '#ffffff' : boss.t.data.accent;
@@ -7513,11 +7554,56 @@ function restartFromVictory() {
   newRun();
   startPlay();
 }
-$('victoryAgain').addEventListener('click', () => {
+function returnToTitleFromVictory() {
+  if (victory) victory.stop();
+  if (NET.role) netLeave();
+  hideAllOverlays();
+  $('netNoticeScreen').classList.add('hidden');
+  $('newRunConfirm').classList.add('hidden');
+  game.cutscene = false; game.fadeAt = 0; game.paused = false;
+  Sfx.duck(false);
+  resetInputs();
+  newRun();
+  game.mode = 'title';
+  refreshContinueButton();
+  startScreen.classList.remove('hidden');
+  window.dispatchEvent(new Event('ater:title-intro-reset'));
+}
+// Safari：輕微手指移動不應使結局按鈕失效；觸控直接處理並防止重複 click。
+function bindVictoryButton(id, action) {
+  const button = $(id);
+  let contact = null, lastTouch = -Infinity;
+  const available = () => game.mode === 'victory' && !$('victoryUI').classList.contains('hidden');
+  button.addEventListener('touchstart', event => {
+    contact = null;
+    if (!available() || event.touches.length !== 1) return;
+    const t = event.changedTouches[0];
+    if (t) contact = {id:t.identifier,x:t.clientX,y:t.clientY};
+  }, {passive:true});
+  button.addEventListener('touchcancel', () => {contact=null;}, {passive:true});
+  button.addEventListener('touchend', event => {
+    const start = contact; contact = null;
+    if (!start || !available()) return;
+    const t = Array.from(event.changedTouches).find(t => t.identifier === start.id);
+    if (!t || Math.hypot(t.clientX-start.x,t.clientY-start.y)>16) return;
+    const r=button.getBoundingClientRect();
+    if (t.clientX<r.left || t.clientX>r.right || t.clientY<r.top || t.clientY>r.bottom) return;
+    if (event.cancelable) event.preventDefault();
+    event.stopPropagation();
+    lastTouch=performance.now();
+    Sfx.unlock(); action();
+  }, {passive:false});
+  button.addEventListener('click', event => {
+    if (!available() || performance.now()-lastTouch<700) return;
+    event.stopPropagation();
+    Sfx.unlock(); action();
+  });
+}
+bindVictoryButton('victoryAgain', () => {
   if (netGuest()) { netAct({ a: 'newrun' }); $('victoryAgain').textContent = '等待房主…'; return; }
   restartFromVictory();
 });
-$('victoryTitle').addEventListener('click', () => { try { location.reload(); } catch (err) { /* 略過 */ } });
+bindVictoryButton('victoryTitle', returnToTitleFromVictory);
 
 /* =========================================================
  * 18. 主迴圈
@@ -7547,6 +7633,7 @@ function update(rdt) {
   updateFire(wdt);
   if (!guest) { updatePickups(rdt); updateSpawner(wdt); }
   else netGuestPickups();
+  updateLateObjective(rdt);
   for (let i = particles.length - 1; i >= 0; i--) {
     const q = particles[i];
     q.x += q.vx * wdt; q.y += q.vy * wdt;
@@ -7601,6 +7688,98 @@ function frame(now) {
   render();
   drawPreview();
   requestAnimationFrame(frame);
+}
+
+/* v1.0.8：單人後五關目標。 */
+function lateActive() { return !NET.on && !!lvl.late; }
+function lateGoal(n) {
+  return ({16:'三波戰鬥，每波擊倒 8 隻敵人',17:'擊敗 3 名精英隊長，護衛不計入目標',18:'生存 60 秒，擊倒敵人可獲得補給',19:'擊敗熔岩督軍與 2 名護衛',20:'擊倒 12 隻敵人，再擊敗最終魔王'})[n] || '';
+}
+function lateProgress() {
+  const q = lvl.late;
+  switch(lvl.n) {
+    case 16: return `第 ${q.wave}/3 波　擊倒 ${Math.min(8,lvl.kills-(q.wave-1)*8)}/8${q.rest > 0 ? '　準備下一波' : ''}`;
+    case 17: return `精英隊長 ${q.captains}/3`;
+    case 18: return `生存 ${Math.min(60,Math.floor(q.elapsed))}/60 秒`;
+    case 19: return `督軍 ${q.bossDead ? '已擊敗' : '未擊敗'}　護衛 ${q.guards}/2`;
+    case 20: return lvl.bossSpawned ? '擊敗最終魔王' : `擊倒 ${Math.min(12,lvl.kills)}/12　迎戰最終魔王`;
+  }
+}
+function lateFraction() {
+  const q = lvl.late;
+  return lvl.n === 17 ? q.captains/3 : lvl.n === 18 ? q.elapsed/60 : lvl.n === 19 ? (q.guards + (q.bossDead?1:0))/3 : lvl.kills/lvl.target;
+}
+function lateEnemyKilled(e) {
+  const q = lvl.late;
+  if (lvl.n === 20) return false;
+  if (lvl.n === 16) {
+    if (lvl.kills >= 24) levelClear();
+    else if (lvl.kills >= q.wave*8 && q.rest <= 0) {
+      q.rest = 2;
+      game.banner = {title:`第 ${q.wave} 波完成`,sub:'喘口氣，下一波即將到來',t:2};
+      dropFood(player.x, player.y, false);
+    }
+  }
+  if (lvl.n === 17 && e.lateCaptain) {
+    q.captains++;
+    if (q.captains >= 3) levelClear();
+    else { game.banner = {title:`隊長 ${q.captains}/3`,sub:'下一名隊長即將現身',t:2}; q.rest=2; }
+  }
+  if (lvl.n === 18 && lvl.kills % 3 === 0) dropFood(e.x,e.y,false);
+  if (lvl.n === 19 && e.lateGuard) { q.guards++; checkLateClear(); }
+  return true;
+}
+function checkLateClear() {
+  if (game.mode === 'play' && lateActive() && lvl.n === 19 && lvl.late.bossDead && lvl.late.guards >= 2) levelClear();
+}
+function updateLateObjective(dt) {
+  if (!lateActive() || game.mode !== 'play' || game.paused || player.dead) return;
+  if (lvl.n === 18) {
+    const q = lvl.late;
+    q.elapsed = Math.min(60,q.elapsed+dt);
+    if (q.elapsed >= q.supplyAt && q.supplyAt < 60) {dropFood(player.x,player.y,false);q.supplyAt+=15;}
+    if (q.elapsed >= 60) levelClear();
+  }
+}
+function spawnLate(role, tag) {
+  const off = Math.hypot(VW,VH)/2;
+  if (!trySpawnEnemy(off+50,off+230,false,player,role)) return false;
+  const e = enemies[enemies.length-1];
+  if (tag === 'captain') {
+    makeElite(e); e.lateCaptain=true;
+    e.t = Object.assign({},e.t,{hp:Math.round(lvl.types[role].hp*2),name:'隊長・'+lvl.types[role].name});
+    e.hp=e.t.hp;
+  }
+  if (tag === 'guard') { makeElite(e);e.lateGuard=true;e.t=Object.assign({},e.t,{hp:Math.round(lvl.types[role].hp*1.5),name:'督軍護衛'});e.hp=e.t.hp; }
+  return true;
+}
+function updateLateSpawner(dt) {
+  if (lvl.n === 20) {
+    lvl.spawnT-=dt;
+    const alive=enemies.filter(e=>!e.dead && !e.boss).length;
+    if (!lvl.bossSpawned && lvl.spawnT<=0 && alive<5 && lvl.kills+alive<12) {if(spawnLate(['melee','brute','archer'][lvl.spawned%3]))lvl.spawnT=.9;}
+    return;
+  }
+  const q=lvl.late;
+  if(q.rest>0) {
+    q.rest=Math.max(0,q.rest-dt);
+    if(q.rest>0)return;
+    if(lvl.n===16){q.wave++;game.banner={title:`第 ${q.wave}/3 波`,sub:['近戰突襲','弓手交錯','混合精兵'][q.wave-1],t:2.5};}
+  }
+  lvl.spawnT-=dt;
+  if(lvl.spawnT>0)return;
+  const alive=enemies.filter(e=>!e.dead&&!e.dying);
+  if(lvl.n===16 && alive.length<5 && lvl.kills+alive.length<q.wave*8) {if(spawnLate(pickRole()))lvl.spawnT=.7;}
+  if(lvl.n===17) {
+    if(q.captains<3&&!alive.some(e=>e.lateCaptain)) {
+      if(spawnLate(['melee','archer','brute'][q.captains],'captain')) {lvl.spawnT=.8;showHint(null,`第 ${q.captains+1} 名隊長出現！循金色箭頭尋找`,4);}
+    } else if(alive.length<4) {if(spawnLate(q.captains===1?'brute':'archer'))lvl.spawnT=1.4;}
+  }
+  if(lvl.n===18 && alive.length<6) {if(spawnLate(['melee','archer','brute'][Math.floor(q.elapsed/20)]))lvl.spawnT=1.1;}
+  if(lvl.n===19) {
+    if(!lvl.bossSpawned)spawnBoss();
+    if(q.guards+alive.filter(e=>e.lateGuard).length<2) {if(spawnLate(q.guards+alive.filter(e=>e.lateGuard).length===0?'brute':'archer','guard'))lvl.spawnT=.8;}
+  }
 }
 
 resize();

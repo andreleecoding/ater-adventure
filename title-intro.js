@@ -44,5 +44,12 @@
   if (rotate) observer.observe(rotate, { attributes:true, attributeFilter:['class'] });
   document.addEventListener('visibilitychange', sync);
   window.addEventListener('pageshow', sync);
+  window.addEventListener('ater:title-intro-reset', () => {
+    ready = false; playing = false; generation++;
+    clearTimeout(fallback);
+    title.classList.remove('title-intro-playing','title-menu-ready');
+    title.classList.add('title-intro-pending');
+    sync();
+  });
   sync();
 })();

@@ -10,14 +10,14 @@
 <meta name="theme-color" content="#14231a">
 <meta name="apple-mobile-web-app-title" content="亞特的冒險">   <!-- 加入主畫面時圖示下方的名字 -->
 <title>亞特的冒險：燼野之境</title>
-<meta name="application-version" content="1.0.7">
+<meta name="application-version" content="1.0.11">
 <!-- PWA 圖示與安裝設定 -->
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 
-<link rel="stylesheet" href="./style.css?v=1.0.7">
+<link rel="stylesheet" href="./style.css?v=1.0.11">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -36,7 +36,7 @@
       <p id="titleSaveHint" class="title-save-hint" hidden>重新開始將取代目前的關卡存檔</p>
     </div>
   </div>
-  <span class="title-version" aria-label="版本 1.0.7">v1.0.7</span>
+  <span class="title-version" aria-label="版本 1.0.11">v1.0.11</span>
 </div>
 <!-- 必須明確確認才能覆蓋既有存檔；點標題或背景不會重開。 -->
 <div id="newRunConfirm" class="overlay hidden new-run-confirm" role="dialog" aria-modal="true" aria-labelledby="newRunConfirmTitle">
@@ -78,7 +78,7 @@
   <div class="vcard">
     <div class="vhead">燼野之境　完全制霸</div>
     <div class="vstats" id="victoryStats"></div>
-    <div class="row"><button class="btn" id="victoryAgain">再玩一次</button><button class="btn quiet" id="victoryTitle">回到標題畫面</button></div>
+    <div class="row"><button type="button" class="btn" id="victoryAgain">再玩一次</button><button type="button" class="btn quiet" id="victoryTitle">回到標題畫面</button></div>
     <p class="vhint">點畫面任何地方，可以自己放煙火！</p>
   </div>
 </div>
@@ -167,8 +167,8 @@
   </div>
 </div>
 
-<script src="./game.js?v=1.0.7" defer></script>
-<script src="./title-intro.js?v=1.0.7" defer></script>
+<script src="./game.js?v=1.0.11" defer></script>
+<script src="./title-intro.js?v=1.0.11" defer></script>
 
 <!-- PWA 更新提示：不打斷遊戲，由玩家決定重啟時機 -->
 <div id="pwaUpdateNotice" hidden role="status" aria-live="polite" aria-label="遊戲更新">
@@ -176,6 +176,6 @@
   <p>新版遊戲已下載完成。立即更新會重新啟動遊戲，請先完成目前的冒險。</p>
   <div class="pwa-actions"><button type="button" id="pwaUpdateLater">稍後再說</button><button type="button" id="pwaUpdateNow">立即更新</button></div>
 </div>
-<script src="./pwa-update.js?v=1.0.7" defer></script>
+<script src="./pwa-update.js?v=1.0.11" defer></script>
 </body>
 </html>
