@@ -241,6 +241,10 @@
   gap:0;
 }
 #startScreen .title-art{
+  margin:0;
+  font-size:inherit;
+  font-weight:inherit;
+  line-height:inherit;
   display:flex;
   position:static;
   flex-direction:column;

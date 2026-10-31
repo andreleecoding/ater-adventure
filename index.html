@@ -9,34 +9,75 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14231a">
 <meta name="apple-mobile-web-app-title" content="亞特的冒險">   <!-- 加入主畫面時圖示下方的名字 -->
-<title>亞特的冒險：燼野之境</title>
-<meta name="application-version" content="1.0.11">
+<title>亞特的冒險：燼野之境｜免費像素動作冒險網頁遊戲</title>
+<meta name="description" content="《亞特的冒險：燼野之境》是免費像素風動作冒險網頁遊戲，支援手機、平板與電腦。探索 20 道關卡，收集武器，運用閃避、格擋與技能挑戰魔王；每關完成後自動存檔，也可加入主畫面離線遊玩。">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://andreleecoding.github.io/ater-adventure/">
+<!-- 社群分享預覽，沿用遊戲圖示 -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:site_name" content="亞特的冒險">
+<meta property="og:title" content="亞特的冒險：燼野之境｜免費像素動作冒險網頁遊戲">
+<meta property="og:description" content="《亞特的冒險：燼野之境》是免費像素風動作冒險網頁遊戲，支援手機、平板與電腦。探索 20 道關卡，收集武器，運用閃避、格擋與技能挑戰魔王；每關完成後自動存檔，也可加入主畫面離線遊玩。">
+<meta property="og:url" content="https://andreleecoding.github.io/ater-adventure/">
+<meta property="og:image" content="https://andreleecoding.github.io/ater-adventure/icon-512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:image:alt" content="亞特的冒險遊戲圖示">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="亞特的冒險：燼野之境">
+<meta name="twitter:description" content="《亞特的冒險：燼野之境》是免費像素風動作冒險網頁遊戲，支援手機、平板與電腦。探索 20 道關卡，收集武器，運用閃避、格擋與技能挑戰魔王；每關完成後自動存檔，也可加入主畫面離線遊玩。">
+<meta name="twitter:image" content="https://andreleecoding.github.io/ater-adventure/icon-512.png">
+<meta name="twitter:image:alt" content="亞特的冒險遊戲圖示">
+<meta name="application-version" content="1.0.12">
 <!-- PWA 圖示與安裝設定 -->
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 
-<link rel="stylesheet" href="./style.css?v=1.0.11">
+<link rel="stylesheet" href="./style.css?v=1.0.12">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "@id": "https://andreleecoding.github.io/ater-adventure/#game",
+  "name": "亞特的冒險：燼野之境",
+  "url": "https://andreleecoding.github.io/ater-adventure/",
+  "description": "《亞特的冒險：燼野之境》是免費像素風動作冒險網頁遊戲，支援手機、平板與電腦。探索 20 道關卡，收集武器，運用閃避、格擋與技能挑戰魔王；每關完成後自動存檔，也可加入主畫面離線遊玩。",
+  "inLanguage": "zh-Hant",
+  "genre": [
+    "動作冒險",
+    "像素遊戲"
+  ],
+  "gamePlatform": "Web browser",
+  "applicationCategory": "GameApplication",
+  "operatingSystem": "Any",
+  "image": "https://andreleecoding.github.io/ater-adventure/icon-512.png",
+  "isAccessibleForFree": true,
+  "softwareVersion": "1.0.12"
+}
+</script>
 </head>
 <body>
-<canvas id="game"></canvas>
+<canvas id="game">亞特的冒險：燼野之境是像素風動作冒險遊戲，需要支援 Canvas 與 JavaScript 的瀏覽器。</canvas>
+<noscript><p>請啟用 JavaScript，才能遊玩《亞特的冒險：燼野之境》。本遊戲支援手機、平板與電腦瀏覽器。</p></noscript>
 <div id="safeProbe"></div>
 
 <!-- 開場：標題慢慢浮現；只能透過明確按鈕開始或繼續-->
 <div id="startScreen" class="overlay titlescreen title-intro-pending">
   <div class="title-stage">
-    <div class="title-art" aria-label="亞特的冒險：燼野之境">
+    <h1 class="title-art" aria-label="亞特的冒險：燼野之境">
       <span class="t1">亞特的冒險</span>
       <span class="t2">燼野之境</span>
-    </div>
+    </h1>
     <div class="title-actions">
       <button type="button" id="continueBtn" class="btn title-action-primary" hidden>繼續冒險</button>
       <button type="button" id="startBtn" class="btn title-action-primary">開始新冒險</button>
       <p id="titleSaveHint" class="title-save-hint" hidden>重新開始將取代目前的關卡存檔</p>
     </div>
   </div>
-  <span class="title-version" aria-label="版本 1.0.11">v1.0.11</span>
+  <span class="title-version" aria-label="版本 1.0.12">v1.0.12</span>
 </div>
 <!-- 必須明確確認才能覆蓋既有存檔；點標題或背景不會重開。 -->
 <div id="newRunConfirm" class="overlay hidden new-run-confirm" role="dialog" aria-modal="true" aria-labelledby="newRunConfirmTitle">
@@ -54,6 +95,8 @@
 <div id="helpScreen" class="overlay hidden">
   <div class="card">
     <h1>操作說明</h1>
+    <p>《亞特的冒險：燼野之境》是免費像素風動作冒險網頁遊戲，支援手機、平板與電腦。探索 20 道關卡、收集武器，運用閃避、格擋與技能挑戰魔王。</p>
+    <p>單人冒險每關完成後會自動存檔；重新開啟時，可從標題選單繼續下一關。加入主畫面並完成初次載入後，也能離線遊玩。</p>
     <div class="howto">
       <div><b>左手搖桿</b>　360° 移動</div>
       <div><b>攻擊</b>　揮劍、砍草、打破木箱</div>
@@ -167,8 +210,8 @@
   </div>
 </div>
 
-<script src="./game.js?v=1.0.11" defer></script>
-<script src="./title-intro.js?v=1.0.11" defer></script>
+<script src="./game.js?v=1.0.12" defer></script>
+<script src="./title-intro.js?v=1.0.12" defer></script>
 
 <!-- PWA 更新提示：不打斷遊戲，由玩家決定重啟時機 -->
 <div id="pwaUpdateNotice" hidden role="status" aria-live="polite" aria-label="遊戲更新">
@@ -176,6 +219,6 @@
   <p>新版遊戲已下載完成。立即更新會重新啟動遊戲，請先完成目前的冒險。</p>
   <div class="pwa-actions"><button type="button" id="pwaUpdateLater">稍後再說</button><button type="button" id="pwaUpdateNow">立即更新</button></div>
 </div>
-<script src="./pwa-update.js?v=1.0.11" defer></script>
+<script src="./pwa-update.js?v=1.0.12" defer></script>
 </body>
 </html>
